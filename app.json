@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "HealthCareApp",
+    "name": "VirtualCare",
     "slug": "HealthCareApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/Login_page.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true
@@ -12,13 +12,8 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/Login_page.png"
       }
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
     }
   }
 }
