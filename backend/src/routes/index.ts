@@ -1,9 +1,9 @@
 import { Router } from 'express';
+import visitRoutes from './visits';
 
 const router = Router();
 
-// Define API routes here
-// router.use('/ai', aiRoutes);
-// router.use('/patients', patientRoutes);
+// Visits: /api/visits/:visitId/analyze
+router.use('/visits', visitRoutes);
 
 export default router;

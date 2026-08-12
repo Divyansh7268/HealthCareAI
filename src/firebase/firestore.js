@@ -143,10 +143,16 @@ export async function getPatientsByWorker(workerUid) {
   const q = query(
     collection(db, COLLECTIONS.PATIENTS),
     where('createdBy', '==', workerUid),
-    orderBy('createdAt', 'desc'),
   );
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const patients = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  
+  // Sort by createdAt descending locally to avoid requiring a composite index
+  return patients.sort((a, b) => {
+    const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+    const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+    return timeB - timeA;
+  });
 }
 
 export async function searchPatients(workerUid, searchText) {
