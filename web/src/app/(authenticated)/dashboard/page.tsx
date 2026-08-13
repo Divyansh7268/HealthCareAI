@@ -25,10 +25,10 @@ export default function DashboardPage() {
         const cases = res.data.cases || [];
         
         // Compute mock stats from cases list
-        const pending = cases.filter((c: any) => c.status === 'pending').length;
-        const highRisk = cases.filter((c: any) => c.aiAssessment?.riskLevel === 'high').length;
-        const emergency = cases.filter((c: any) => c.aiAssessment?.riskLevel === 'emergency').length;
-        const completed = cases.filter((c: any) => c.status === 'reviewed').length;
+        const pending = cases.filter((c: any) => c.doctorReviewStatus === 'review_required').length;
+        const highRisk = cases.filter((c: any) => c.riskLevel === 'high').length;
+        const emergency = cases.filter((c: any) => c.riskLevel === 'emergency').length;
+        const completed = cases.filter((c: any) => c.doctorReviewStatus === 'reviewed' || c.doctorReviewStatus === 'approved').length;
 
         setStats({
           pendingQueries: pending,

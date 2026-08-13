@@ -27,14 +27,14 @@ export default function CasesPage() {
 
   const filteredCases = cases.filter(c => {
     if (filter === 'all') return true;
-    if (filter === 'pending') return c.status === 'pending';
-    if (filter === 'reviewed') return c.status === 'reviewed';
+    if (filter === 'pending') return c.doctorReviewStatus === 'review_required';
+    if (filter === 'reviewed') return c.doctorReviewStatus === 'reviewed';
     if (filter === 'approved') return c.doctorAction?.action === 'approved';
     if (filter === 'rejected') return c.doctorAction?.action === 'rejected';
     
     // Risk level filters
     if (['emergency', 'high', 'moderate', 'low'].includes(filter)) {
-      return c.aiAssessment?.riskLevel === filter;
+      return c.riskLevel === filter;
     }
     
     return true;
