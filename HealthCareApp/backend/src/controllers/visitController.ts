@@ -271,23 +271,21 @@ export async function analyzeVisit(req: Request, res: Response) {
   });
 }
 
- e x p o r t   c o n s t   s e n d T o D o c t o r   =   a s y n c   ( r e q :   R e q u e s t ,   r e s :   R e s p o n s e )   = >   { 
-     t r y   { 
-         c o n s t   {   v i s i t I d   }   =   r e q . p a r a m s ; 
-         c o n s t   {   p a t i e n t I d   }   =   r e q . b o d y ; 
-         i f   ( ! v i s i t I d   | |   ! p a t i e n t I d )   { 
-             r e t u r n   r e s . s t a t u s ( 4 0 0 ) . j s o n ( {   e r r o r :   ' v i s i t I d   a n d   p a t i e n t I d   a r e   r e q u i r e d '   } ) ; 
-         } 
-         c o n s t   {   d b   }   =   r e q u i r e ( ' . . / c o n f i g / f i r e b a s e ' ) ; 
-         c o n s t   C O L L E C T I O N S   =   {   P A T I E N T S :   ' p a t i e n t s ' ,   V I S I T S :   ' v i s i t s '   } ; 
-         c o n s t   v i s i t R e f   =   d b . c o l l e c t i o n ( C O L L E C T I O N S . P A T I E N T S ) . d o c ( p a t i e n t I d ) . c o l l e c t i o n ( C O L L E C T I O N S . V I S I T S ) . d o c ( v i s i t I d ) ; 
-         a w a i t   v i s i t R e f . u p d a t e ( {   d o c t o r R e v i e w S t a t u s :   ' r e v i e w _ r e q u i r e d ' ,   u p d a t e d A t :   n e w   D a t e ( )   } ) ; 
-         a w a i t   d b . c o l l e c t i o n ( C O L L E C T I O N S . V I S I T S ) . d o c ( v i s i t I d ) . s e t ( {   d o c t o r R e v i e w S t a t u s :   ' r e v i e w _ r e q u i r e d ' ,   u p d a t e d A t :   n e w   D a t e ( )   } ,   {   m e r g e :   t r u e   } ) ; 
-         r e t u r n   r e s . s t a t u s ( 2 0 0 ) . j s o n ( {   s u c c e s s :   t r u e ,   m e s s a g e :   ' S e n t   t o   d o c t o r '   } ) ; 
-     }   c a t c h   ( e r r o r :   a n y )   { 
-         c o n s o l e . e r r o r ( ' [ s e n d T o D o c t o r ]   F a i l e d : ' ,   e r r o r . m e s s a g e ) ; 
-         r e t u r n   r e s . s t a t u s ( 5 0 0 ) . j s o n ( {   e r r o r :   ' F a i l e d   t o   s e n d   t o   d o c t o r '   } ) ; 
-     } 
- } ; 
-  
- 
+export const sendToDoctor = async (req: Request, res: Response) => {
+  try {
+    const { visitId } = req.params;
+    const { patientId } = req.body;
+    if (!visitId || !patientId) {
+      return res.status(400).json({ error: 'visitId and patientId are required' });
+    }
+    const { db } = require('../config/firebase');
+    const COLLECTIONS = { PATIENTS: 'patients', VISITS: 'visits' };
+    const visitRef = db.collection(COLLECTIONS.PATIENTS).doc(patientId).collection(COLLECTIONS.VISITS).doc(visitId);
+    await visitRef.update({ doctorReviewStatus: 'review_required', updatedAt: new Date() });
+    await db.collection(COLLECTIONS.VISITS).doc(visitId).set({ doctorReviewStatus: 'review_required', updatedAt: new Date() }, { merge: true });
+    return res.status(200).json({ success: true, message: 'Sent to doctor' });
+  } catch (error: any) {
+    console.error('[sendToDoctor] Failed:', error.message);
+    return res.status(500).json({ error: 'Failed to send to doctor' });
+  }
+};
