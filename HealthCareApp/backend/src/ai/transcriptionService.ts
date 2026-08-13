@@ -4,10 +4,17 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const SARVAM_API_KEY = process.env.SARVAM_API_KEY;
 
 if (!GEMINI_API_KEY) {
   console.warn('[WARNING] GEMINI_API_KEY is not set in environment variables');
 }
+if (!SARVAM_API_KEY) {
+  console.warn('[WARNING] SARVAM_API_KEY is not set in environment variables');
+}
+
+import FormData from 'form-data';
+import axios from 'axios';
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || '');
 
@@ -41,12 +48,12 @@ const model = genAI.getGenerativeModel({
 });
 
 const TRANSCRIPTION_PROMPT = `
-You are an expert medical transcriptionist assisting rural healthcare workers in India.
-You will be provided with an audio recording of a health worker describing a patient's condition. The recording may be in Hindi, English, or a mix of both.
+You are an expert medical assistant assisting rural healthcare workers in India.
+You will be provided with a transcript of a health worker describing a patient's condition. The text may be in Hindi, English, or a mix of both.
 
 YOUR TASKS:
-1. Provide a highly accurate transcription of the audio.
-2. Determine the primary language spoken.
+1. Return the exact transcription text provided to you.
+2. Determine the primary language spoken in the text.
 3. Extract a list of potential symptoms mentioned.
 
 CRITICAL RULES:
@@ -66,31 +73,55 @@ export async function transcribeAudio(audioBuffer: Buffer, mimeType: string): Pr
   if (!GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is missing');
   }
+  if (!SARVAM_API_KEY) {
+    throw new Error('SARVAM_API_KEY is missing');
+  }
 
-  // Gemini supports audio/mp4, audio/mpeg, audio/wav, audio/webm, audio/flac, audio/aac, audio/ogg
-  // Normalize m4a variants to audio/mp4 which Gemini properly understands
+  // Normalize m4a variants to audio/mp4
   let normalizedMimeType = mimeType;
   if (mimeType === 'audio/m4a' || mimeType === 'audio/x-m4a') {
     normalizedMimeType = 'audio/mp4';
   }
 
-  console.log(`[TranscriptionService] Transcribing audio. originalMime=${mimeType}, normalizedMime=${normalizedMimeType}, bufferSize=${audioBuffer.length}`);
+  console.log(`[TranscriptionService] Transcribing audio with Sarvam. originalMime=${mimeType}, normalizedMime=${normalizedMimeType}, bufferSize=${audioBuffer.length}`);
 
-  const audioPart = {
-    inlineData: {
-      data: audioBuffer.toString('base64'),
-      mimeType: normalizedMimeType
-    }
-  };
+  // 1. Call Sarvam AI for Speech-to-Text
+  const formData = new FormData();
+  formData.append('file', audioBuffer, {
+    filename: 'audio.mp4',
+    contentType: normalizedMimeType,
+  });
+  
+  // You can specify model or language_code if needed. Leaving defaults for Saaras.
+  
+  let transcriptText = "";
+  try {
+    const sarvamRes = await axios.post('https://api.sarvam.ai/speech-to-text', formData, {
+      headers: {
+        'api-subscription-key': SARVAM_API_KEY,
+        ...formData.getHeaders(),
+      },
+    });
+    transcriptText = sarvamRes.data.transcript;
+    console.log(`[TranscriptionService] Sarvam STT complete. Text: ${transcriptText}`);
+  } catch (err: any) {
+    console.error('[TranscriptionService] Sarvam API Error:', err.response?.data || err.message);
+    throw new Error('Failed to transcribe audio with Sarvam AI');
+  }
 
+  // 2. Call Gemini to extract symptoms from the transcript
+  console.log(`[TranscriptionService] Extracting symptoms with Gemini...`);
   const response = await model.generateContent([
     TRANSCRIPTION_PROMPT,
-    audioPart
+    `Here is the transcript: "${transcriptText}"`
   ]);
 
   const responseText = response.response.text();
   const result = JSON.parse(responseText) as TranscriptionResult;
   
-  console.log(`[TranscriptionService] Transcription complete. Language: ${result.language}. Text length: ${result.text.length}`);
+  // Ensure the transcript from Sarvam is exactly what we return
+  result.text = transcriptText;
+  
+  console.log(`[TranscriptionService] Analysis complete. Language: ${result.language}. Symptoms: ${result.extractedSymptoms.join(', ')}`);
   return result;
 }
