@@ -145,103 +145,51 @@ export default function AIAnalysisResultScreen({ navigation, route }) {
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           
-          {/* ── AI Assessment Section (Risk Level) ────────── */}
-          <Text style={styles.sectionTitle}>AI ASSESSMENT</Text>
+          {/* ── 1. Possible Risk ────────── */}
           <View style={[styles.riskCard, { backgroundColor: currentRiskBg }]}>
             <View style={styles.riskHeader}>
               <View style={[styles.riskIconCircle, { borderColor: currentRiskColor }]}>
                 <Ionicons name="alert-circle-outline" size={36} color={currentRiskColor} />
               </View>
               <View style={{ flex: 1, marginLeft: 16 }}>
-                <Text style={[styles.riskLabel, { color: currentRiskColor }]}>RISK LEVEL</Text>
+                <Text style={[styles.riskLabel, { color: currentRiskColor }]}>POSSIBLE RISK</Text>
                 <Text style={[styles.riskValue, { color: currentRiskColor }]}>{displayRisk}</Text>
               </View>
               <Ionicons name="shield-outline" size={40} color={currentRiskColor + '20'} style={{ position: 'absolute', right: -10, top: 0 }} />
             </View>
-            <Text style={styles.riskDescription}>
-              Based on the provided information, the urgency is {aiResult.urgency?.toUpperCase() || 'NORMAL'}. Monitor the patient and follow recommended actions.
-            </Text>
           </View>
 
-          {/* ── Red Flags ────────── */}
-          {redFlags.length > 0 && (
-            <>
-              <Text style={[styles.sectionTitle, { color: COLORS.danger }]}>RED FLAGS DETECTED</Text>
-              <View style={[styles.recsCard, { backgroundColor: COLORS.dangerBg, borderColor: COLORS.danger, borderWidth: 1 }]}>
-                {redFlags.map((flag, index) => (
-                  <View key={index} style={[styles.recRow, index !== redFlags.length - 1 && { borderBottomWidth: 1, borderBottomColor: '#FCA5A5' }]}>
-                    <Ionicons name="warning-outline" size={20} color={COLORS.danger} style={{ marginRight: 12 }} />
-                    <Text style={[styles.recText, { color: COLORS.danger, fontWeight: '600' }]}>{flag}</Text>
-                  </View>
-                ))}
+          {/* ── 2. Problem (AI Suggestion) ────────── */}
+          <Text style={styles.sectionTitle}>PROBLEM</Text>
+          <View style={styles.recsCard}>
+            <View style={[styles.recRow, { flexDirection: 'column', alignItems: 'flex-start', paddingVertical: 12 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="medkit-outline" size={24} color={COLORS.primary} style={{ marginRight: 12 }} />
+                <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.textDark }}>
+                  {possibleConditions.length > 0 ? possibleConditions[0].name : 'Unknown Condition'}
+                </Text>
               </View>
-            </>
-          )}
+            </View>
+          </View>
 
-          {/* ── AI Suggestions ────────── */}
-          {possibleConditions.length > 0 && (
-            <>
-              <Text style={styles.sectionTitle}>AI SUGGESTION</Text>
-              <View style={styles.recsCard}>
-                {possibleConditions.map((cond, index) => (
-                  <View key={index} style={[styles.recRow, index !== possibleConditions.length - 1 && styles.recRowBorder, { flexDirection: 'column', alignItems: 'flex-start' }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                      <Ionicons name="medkit-outline" size={18} color={COLORS.primary} style={{ marginRight: 8 }} />
-                      <Text style={[styles.recText, { fontWeight: '700' }]}>{cond.name}</Text>
-                    </View>
-                    {cond.reasoning && (
-                      <Text style={{ fontSize: 13, color: COLORS.textDark, paddingLeft: 26, marginBottom: 4 }}>
-                        {cond.reasoning}
-                      </Text>
-                    )}
-                    {cond.supportingFindings?.length > 0 && (
-                      <Text style={{ fontSize: 13, color: COLORS.textGray, paddingLeft: 26 }}>
-                        Supports: {cond.supportingFindings.join(', ')}
-                      </Text>
-                    )}
-                  </View>
-                ))}
+          {/* ── 3. Solutions (AI Recommendations) ───── */}
+          <Text style={styles.sectionTitle}>SOLUTIONS</Text>
+          <View style={styles.recsCard}>
+            <View style={[styles.recRow, { paddingVertical: 12 }]}>
+              <View style={{ marginRight: 12 }}>
+                <Ionicons name="bandage-outline" size={24} color={COLORS.success} />
               </View>
-            </>
-          )}
-
-          {/* ── AI Recommendations ───── */}
-          {formattedRecs.length > 0 && (
-            <>
-              <Text style={styles.sectionTitle}>AI RECOMMENDATIONS</Text>
-              <View style={styles.recsCard}>
-                {formattedRecs.map((rec, index) => (
-                  <View key={index} style={[styles.recRow, index !== formattedRecs.length - 1 && styles.recRowBorder]}>
-                    <View style={styles.recIconCircle}>
-                      <MaterialCommunityIcons name={rec.icon || 'circle-medium'} size={20} color={COLORS.primary} />
-                    </View>
-                    <Text style={styles.recText}>{rec.text}</Text>
-                  </View>
-                ))}
-              </View>
-            </>
-          )}
-
-          {/* ── Missing Information ────────── */}
-          {missingInfo.length > 0 && (
-            <>
-              <Text style={[styles.sectionTitle, { color: COLORS.warning }]}>MISSING INFORMATION</Text>
-              <View style={[styles.recsCard, { backgroundColor: COLORS.warningBg, borderColor: COLORS.warning, borderWidth: 1 }]}>
-                {missingInfo.map((info, index) => (
-                  <View key={index} style={[styles.recRow, index !== missingInfo.length - 1 && { borderBottomWidth: 1, borderBottomColor: '#FDE68A' }]}>
-                    <Ionicons name="help-circle-outline" size={20} color={COLORS.warning} style={{ marginRight: 12 }} />
-                    <Text style={[styles.recText, { color: '#B45309' }]}>{info}</Text>
-                  </View>
-                ))}
-              </View>
-            </>
-          )}
+              <Text style={{ fontSize: 16, color: COLORS.textDark, flex: 1, lineHeight: 24 }}>
+                {aiResult.recommendedNextStep || 'Follow basic care instructions.'}
+              </Text>
+            </View>
+          </View>
 
           {/* ── Disclaimer Banner ────────────── */}
-          <View style={styles.disclaimerBanner}>
+          <View style={[styles.disclaimerBanner, { marginTop: 20 }]}>
             <Ionicons name="information-circle-outline" size={24} color={COLORS.primary} />
             <Text style={styles.disclaimerText}>
-              {aiResult.disclaimer || "This is an AI-generated suggestion and not a medical diagnosis."}
+              This is an AI-generated suggestion. Please consult a doctor for final advice.
             </Text>
           </View>
 

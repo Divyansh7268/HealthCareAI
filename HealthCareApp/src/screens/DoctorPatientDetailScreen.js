@@ -149,31 +149,36 @@ export default function DoctorPatientDetailScreen({ navigation, route }) {
 
         {/* ── AI Diagnosis ────────────────────── */}
         <View style={[styles.card, { borderColor: '#8B5CF620', backgroundColor: '#F5F3FF' }]}>
-          <SectionHeader icon="sparkles" title="AI Diagnosis" subtitle="(By AI)" color="#8B5CF6" />
+          <SectionHeader icon="sparkles" title="AI Diagnosis" subtitle="(Simplified)" color="#8B5CF6" />
           
-          <View style={styles.aiRow}>
-            {/* Left */}
-            <View style={styles.aiLeft}>
-              <Text style={styles.aiLabel}>Possible Condition</Text>
-              <Text style={styles.aiCondition}>
-                {p.aiAssessment.conditions && p.aiAssessment.conditions.length > 0 ? p.aiAssessment.conditions[0].name : 'Unknown'}
+          <View style={{ marginTop: 12 }}>
+            <Text style={{ fontSize: 13, color: COLORS.textGray, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: '700', marginBottom: 4 }}>
+              1. Possible Risk
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Ionicons name="alert-circle" size={20} color={COLORS.orange} style={{ marginRight: 6 }} />
+              <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.textDark, textTransform: 'capitalize' }}>
+                {p.aiAssessment.riskLevel || 'Unknown'}
               </Text>
             </View>
 
-            {/* Vertical Line */}
-            <View style={styles.aiDivider} />
+            <Text style={{ fontSize: 13, color: COLORS.textGray, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: '700', marginBottom: 4 }}>
+              2. Problem
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 }}>
+              <Ionicons name="medkit" size={20} color={COLORS.brand} style={{ marginRight: 6, marginTop: 2 }} />
+              <Text style={{ fontSize: 16, color: COLORS.textDark, flex: 1, lineHeight: 24 }}>
+                {p.aiAssessment.conditions && p.aiAssessment.conditions.length > 0 ? p.aiAssessment.conditions[0].name : 'Unknown Condition'}
+              </Text>
+            </View>
 
-            {/* Right */}
-            <View style={styles.aiRight}>
-              <Text style={styles.aiLabel}>Severity Level</Text>
-              <View style={styles.severityBadge}>
-                <Ionicons name="alert-circle-outline" size={14} color={COLORS.orange} />
-                <Text style={styles.severityText}> {p.aiAssessment.riskLevel || 'Unknown'}</Text>
-              </View>
-
-              <Text style={[styles.aiLabel, { marginTop: SPACING.md }]}>AI Recommendation</Text>
-              <Text style={styles.aiRecText}>
-                {p.aiAssessment.recommendations ? p.aiAssessment.recommendations.join(', ') : 'No recommendations'}
+            <Text style={{ fontSize: 13, color: COLORS.textGray, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: '700', marginBottom: 4 }}>
+              3. Solutions
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 }}>
+              <Ionicons name="bandage" size={20} color={COLORS.success} style={{ marginRight: 6, marginTop: 2 }} />
+              <Text style={{ fontSize: 16, color: COLORS.textDark, flex: 1, lineHeight: 24 }}>
+                {p.aiAssessment.recommendations ? p.aiAssessment.recommendations.join(', ') : 'Follow basic care instructions.'}
               </Text>
             </View>
           </View>
