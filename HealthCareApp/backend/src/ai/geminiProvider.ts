@@ -20,9 +20,9 @@ export async function generateClinicalAssessment(
     throw new Error('Gemini API key is not configured');
   }
 
-  // Using gemini-3.5-flash for complex clinical reasoning tasks
+  // Using gemini-1.5-flash for complex clinical reasoning tasks
   const model = genAI.getGenerativeModel({
-    model: 'gemini-3.5-flash',
+    model: 'gemini-1.5-flash',
     systemInstruction: systemInstruction,
     generationConfig: {
       responseMimeType: 'application/json',
