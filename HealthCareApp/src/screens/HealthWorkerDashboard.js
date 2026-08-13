@@ -374,6 +374,7 @@ export default function HealthWorkerDashboard({ navigation, workerName = 'Asha D
             </TouchableOpacity>
           </View>
         </ScrollView>
+        )}
 
         {/* ── Bottom Tab Bar ───────────────────── */}
         <View style={styles.tabBar}>
