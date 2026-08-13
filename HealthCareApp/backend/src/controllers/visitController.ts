@@ -293,12 +293,40 @@ export const sendToDoctor = async (req: Request, res: Response) => {
 export const getPendingReviews = async (req: Request, res: Response) => {
   try {
     const { db } = require('../config/firebase');
-    const COLLECTIONS = { VISITS: 'visits' };
+    const COLLECTIONS = { VISITS: 'visits', PATIENTS: 'patients' };
     const snapshot = await db.collection(COLLECTIONS.VISITS)
       .where('doctorReviewStatus', '==', 'review_required')
       .get();
-    const visits: any[] = [];
-    snapshot.forEach((doc: any) => visits.push({ id: doc.id, ...doc.data() }));
+    
+    let visits: any[] = [];
+    
+    for (const doc of snapshot.docs) {
+      const visitData = doc.data();
+      const patientId = visitData.patientId;
+      let patientInfo = {};
+      
+      if (patientId) {
+        const patientDoc = await db.collection(COLLECTIONS.PATIENTS).doc(patientId).get();
+        if (patientDoc.exists) {
+          const pData = patientDoc.data();
+          patientInfo = {
+            patientName: pData.name || pData.fullName || 'Unknown Patient',
+            patientAge: pData.age || pData.dateOfBirth || '--',
+            patientGender: pData.gender || '--'
+          };
+        }
+      }
+      
+      visits.push({ id: doc.id, ...visitData, ...patientInfo });
+    }
+
+    // Sort newest first (descending)
+    visits.sort((a, b) => {
+      const timeA = a.updatedAt?._seconds || a.createdAt?._seconds || 0;
+      const timeB = b.updatedAt?._seconds || b.createdAt?._seconds || 0;
+      return timeB - timeA;
+    });
+
     return res.status(200).json({ success: true, visits });
   } catch (error: any) {
     console.error('[getPendingReviews] Failed:', error.message);

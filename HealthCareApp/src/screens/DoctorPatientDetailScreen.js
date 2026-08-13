@@ -46,7 +46,7 @@ export default function DoctorPatientDetailScreen({ navigation, route }) {
 
   // Use dummy data if no patient is passed
   const p = {
-    name: patientId || 'Patient',
+    name: visit.patientName || 'Unknown Patient',
     age: visit.patientAge || '--',
     gender: visit.patientGender || '--',
     phone: '--',

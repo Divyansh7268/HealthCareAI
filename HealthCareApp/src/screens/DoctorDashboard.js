@@ -244,7 +244,7 @@ export default function DoctorDashboard({ navigation }) {
                 key={q.id} 
                 query={{
                   ...q,
-                  name: q.patientId || 'Patient', // fallback name if we didn't fetch patient details
+                  name: q.patientName || 'Unknown Patient', 
                   symptoms: q.symptoms || 'Symptoms not provided',
                   risk: q.riskLevel ? (q.riskLevel.charAt(0).toUpperCase() + q.riskLevel.slice(1)) : 'Unknown',
                   date: new Date(q.updatedAt?._seconds ? q.updatedAt._seconds * 1000 : Date.now()).toLocaleDateString(),
