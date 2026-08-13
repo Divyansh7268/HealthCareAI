@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../theme';
 import { submitDoctorReview } from '../api/visitApi';
+import { startVideoCall } from '../utils/videoCall';
 
 // ─────────────────────────────────────────────────────────────
 // Components
@@ -123,6 +124,29 @@ export default function DoctorPatientDetailScreen({ navigation, route }) {
             </View>
           </View>
         </View>
+
+        {/* ── Video Call Action ───────────────── */}
+        <TouchableOpacity 
+          style={{
+            backgroundColor: '#8B5CF6',
+            borderRadius: RADIUS.md,
+            paddingVertical: 14,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: SPACING.lg,
+            shadowColor: '#8B5CF6',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 5,
+          }}
+          activeOpacity={0.8}
+          onPress={() => startVideoCall(visitId)}
+        >
+          <Ionicons name="videocam" size={20} color={COLORS.white} style={{ marginRight: 8 }} />
+          <Text style={{ color: COLORS.white, fontWeight: '700', fontSize: 16 }}>Start Video Consult</Text>
+        </TouchableOpacity>
 
         {/* ── Problem Card ────────────────────── */}
         <View style={[styles.card, { borderColor: COLORS.brand + '20' }]}>

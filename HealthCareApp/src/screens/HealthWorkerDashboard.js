@@ -15,10 +15,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS as THEME_COLORS, FONTS as THEME_FONTS, RADIUS, SHADOW, SPACING } from '../theme';
+import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../theme';
 import { useAuthStore } from '../store/useAuthStore';
-import { searchPatients } from '../api/patientApi';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { searchPatients } from '../api/patientApi';
+import { startVideoCall } from '../utils/videoCall';
 import { searchLocalPatients } from '../storage/repositories/patientRepo';
 
 const { width } = Dimensions.get('window');
@@ -153,6 +154,67 @@ export default function HealthWorkerDashboard({ navigation, workerName = 'Asha D
     fetchPatients();
   }, [searchQuery]);
 
+  const renderConsultTab = () => {
+    // Filter patients who have a pending doctor review or ai_assessed status
+    const pendingConsults = patients.filter(p => p.doctorReviewStatus === 'pending' || p.status === 'ai_assessed' || p.status === 'completed');
+    
+    return (
+      <View style={{ flex: 1, padding: 20 }}>
+        <Text style={{ ...FONTS.h2, fontSize: 22, color: COLORS.textDark, marginBottom: 8 }}>Video Consultations</Text>
+        <Text style={{ ...FONTS.body, color: COLORS.textGray, marginBottom: 20 }}>Connect with doctors for patient reviews.</Text>
+        
+        {pendingConsults.length === 0 ? (
+          <View style={{ alignItems: 'center', justifyContent: 'center', marginTop: 40 }}>
+            <Ionicons name="videocam-outline" size={64} color={COLORS.border} />
+            <Text style={{ marginTop: 16, color: COLORS.textGray, fontSize: 16 }}>No pending consultations</Text>
+          </View>
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {pendingConsults.map((p) => {
+              // Find the most recent visit ID to use as the room ID
+              const visitId = p.id; // Usually the patient document doesn't have the visit ID directly in searchPatients. Wait, searchPatients might just return patient basic details.
+              // Assuming p.recentVisitId exists or we use patient ID for the room if visitId is missing.
+              const roomId = p.recentVisitId || p.id;
+              
+              return (
+                <View key={p.id} style={{
+                  backgroundColor: COLORS.white,
+                  borderRadius: RADIUS.lg,
+                  padding: 16,
+                  marginBottom: 12,
+                  borderWidth: 1,
+                  borderColor: COLORS.border,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  ...SHADOW.sm,
+                }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ ...FONTS.h3, fontSize: 16, marginBottom: 4 }}>{p.name || 'Unknown Patient'}</Text>
+                    <Text style={{ ...FONTS.body, fontSize: 13, color: COLORS.textGray }}>Status: {p.doctorReviewStatus === 'pending' ? 'Waiting for Doctor' : 'Ready to Join'}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={{
+                      backgroundColor: COLORS.greenLight,
+                      borderRadius: RADIUS.md,
+                      paddingVertical: 10,
+                      paddingHorizontal: 16,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                    }}
+                    onPress={() => startVideoCall(roomId)}
+                  >
+                    <Ionicons name="videocam" size={18} color={COLORS.success} style={{ marginRight: 6 }} />
+                    <Text style={{ color: COLORS.success, fontWeight: '700' }}>Join</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </ScrollView>
+        )}
+      </View>
+    );
+  };
+
   const filtered = patients.filter((p) => {
     const uiStatus = getFrontendStatus(p);
     const matchFilter = activeFilter === 'All' || uiStatus === activeFilter;
@@ -191,8 +253,11 @@ export default function HealthWorkerDashboard({ navigation, workerName = 'Asha D
         </View>
 
         {/* ── Main Content ─────────────────────── */}
-        <ScrollView
-          style={{ flex: 1 }}
+        {activeTab === 'Consult' ? (
+          renderConsultTab()
+        ) : (
+          <ScrollView
+            style={{ flex: 1, display: activeTab === 'Home' ? 'flex' : 'none' }}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
@@ -315,7 +380,7 @@ export default function HealthWorkerDashboard({ navigation, workerName = 'Asha D
           {[
             { key: 'Home',          icon: 'home',     iconOut: 'home-outline' },
             { key: 'Patients',      icon: 'people',   iconOut: 'people-outline' },
-            { key: 'Settings',      icon: 'settings', iconOut: 'settings-outline' },
+            { key: 'Consult',       icon: 'videocam', iconOut: 'videocam-outline' },
           ].map((tab) => {
             const active = activeTab === tab.key;
             return (
