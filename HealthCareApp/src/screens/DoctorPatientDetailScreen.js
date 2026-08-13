@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../theme';
+import { submitDoctorReview } from '../api/visitApi';
 
 // ─────────────────────────────────────────────────────────────
 // Components
@@ -38,16 +39,43 @@ const VitalBox = ({ icon, value, unit, label, color }) => (
 // Main Screen
 // ─────────────────────────────────────────────────────────────
 export default function DoctorPatientDetailScreen({ navigation, route }) {
+  const [submitting, setSubmitting] = React.useState(false);
+  const visit = route?.params?.visit || {};
+  const patientId = route?.params?.patientId;
+  const visitId = route?.params?.visitId;
+
   // Use dummy data if no patient is passed
-  const p = route?.params?.patient || {
-    name: 'Ramesh Kumar',
-    age: 52,
-    gender: 'Male',
-    phone: '9876543210',
-    date: '12 May 2026, 10:30 AM',
-    queryId: 'QRY01245',
-    avatarInitials: 'RK',
+  const p = {
+    name: patientId || 'Patient',
+    age: visit.patientAge || '--',
+    gender: visit.patientGender || '--',
+    phone: '--',
+    date: visit.updatedAt?._seconds ? new Date(visit.updatedAt._seconds * 1000).toLocaleString() : 'N/A',
+    queryId: visitId || 'QRY01245',
+    avatarInitials: 'P',
     avatarColor: '#F59E0B',
+    symptoms: visit.symptoms || 'Not provided',
+    transcription: visit.transcription || 'No transcription available',
+    vitals: visit.vitals || {},
+    aiAssessment: visit.aiAssessment || {}
+  };
+
+  const handleAction = async (action) => {
+    try {
+      setSubmitting(true);
+      await submitDoctorReview(visitId, {
+        patientId,
+        action,
+        reviewNotes: ''
+      });
+      alert(`Review submitted: ${action}`);
+      navigation.goBack();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to submit review');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -99,26 +127,13 @@ export default function DoctorPatientDetailScreen({ navigation, route }) {
         {/* ── Problem Card ────────────────────── */}
         <View style={[styles.card, { borderColor: COLORS.brand + '20' }]}>
           <SectionHeader icon="account-alert-outline" title="Problem" subtitle="(As per Patient)" color={COLORS.brand} />
-          <Text style={styles.bodyText}>Fever, headache and body pain</Text>
+          <Text style={styles.bodyText}>{p.symptoms}</Text>
         </View>
 
         {/* ── Patient Reported Voice ──────────── */}
         <View style={[styles.card, { borderColor: '#8B5CF620', backgroundColor: '#F5F3FF50' }]}>
-          <SectionHeader icon="microphone-outline" title="Patient Reported" subtitle="(As per Patient Voice)" color="#8B5CF6" />
-          <View style={styles.bulletList}>
-            {[
-              'Having fever since 2 days',
-              'Severe headache',
-              'Body pain and weakness',
-              'No appetite',
-              'Feeling cold'
-            ].map((item, idx) => (
-              <View key={idx} style={styles.bulletItem}>
-                <View style={styles.bulletDot} />
-                <Text style={styles.bodyText}>{item}</Text>
-              </View>
-            ))}
-          </View>
+          <SectionHeader icon="microphone-outline" title="Transcription" subtitle="(Voice to Text)" color="#8B5CF6" />
+          <Text style={styles.bodyText}>{p.transcription}</Text>
         </View>
 
         {/* ── Vitals ──────────────────────────── */}
@@ -126,11 +141,9 @@ export default function DoctorPatientDetailScreen({ navigation, route }) {
           <SectionHeader icon="heart-pulse" title="Vitals" subtitle="(At Time of Assessment)" color={COLORS.success} />
           
           <View style={styles.vitalsGrid}>
-            <VitalBox icon="thermometer" value="98.6" unit="°F" label="Temperature" color={COLORS.success} />
-            <VitalBox icon="cards-heart-outline" value="78" unit="bpm" label="Heart Rate" color={COLORS.danger} />
-            <VitalBox icon="stethoscope" value="120/80" unit="BP" label="BP" color={COLORS.success} />
-            <VitalBox icon="lungs" value="18" unit="/min" label="Resp. Rate" color="#8B5CF6" />
-            <VitalBox icon="water-outline" value="98" unit="%" label="SpO2" color={COLORS.brand} />
+            <VitalBox icon="thermometer" value={p.vitals.temperature || '--'} unit="°F" label="Temperature" color={COLORS.success} />
+            <VitalBox icon="cards-heart-outline" value={p.vitals.heartRate || '--'} unit="bpm" label="Heart Rate" color={COLORS.danger} />
+            <VitalBox icon="water-outline" value={p.vitals.oxygenLevel || '--'} unit="%" label="SpO2" color={COLORS.brand} />
           </View>
         </View>
 
@@ -142,15 +155,9 @@ export default function DoctorPatientDetailScreen({ navigation, route }) {
             {/* Left */}
             <View style={styles.aiLeft}>
               <Text style={styles.aiLabel}>Possible Condition</Text>
-              <Text style={styles.aiCondition}>Viral Fever</Text>
-              
-              <Text style={[styles.aiLabel, { marginTop: SPACING.md }]}>Confidence Score</Text>
-              <View style={styles.progressRow}>
-                <Text style={styles.confidenceScore}>85%</Text>
-                <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: '85%' }]} />
-                </View>
-              </View>
+              <Text style={styles.aiCondition}>
+                {p.aiAssessment.conditions && p.aiAssessment.conditions.length > 0 ? p.aiAssessment.conditions[0].name : 'Unknown'}
+              </Text>
             </View>
 
             {/* Vertical Line */}
@@ -161,12 +168,12 @@ export default function DoctorPatientDetailScreen({ navigation, route }) {
               <Text style={styles.aiLabel}>Severity Level</Text>
               <View style={styles.severityBadge}>
                 <Ionicons name="alert-circle-outline" size={14} color={COLORS.orange} />
-                <Text style={styles.severityText}> Moderate</Text>
+                <Text style={styles.severityText}> {p.aiAssessment.riskLevel || 'Unknown'}</Text>
               </View>
 
               <Text style={[styles.aiLabel, { marginTop: SPACING.md }]}>AI Recommendation</Text>
               <Text style={styles.aiRecText}>
-                Rest, hydration, paracetamol for fever.{'\n'}Monitor if symptoms worsen.
+                {p.aiAssessment.recommendations ? p.aiAssessment.recommendations.join(', ') : 'No recommendations'}
               </Text>
             </View>
           </View>
@@ -185,17 +192,32 @@ export default function DoctorPatientDetailScreen({ navigation, route }) {
         {/* ── Doctor Action ───────────────────── */}
         <Text style={styles.actionTitle}>Doctor Action</Text>
         <View style={styles.actionButtonsRow}>
-          <TouchableOpacity style={[styles.actionBtn, { borderColor: COLORS.success, backgroundColor: COLORS.greenLight }]} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={[styles.actionBtn, { borderColor: COLORS.success, backgroundColor: COLORS.greenLight, opacity: submitting ? 0.5 : 1 }]} 
+            activeOpacity={0.7}
+            onPress={() => handleAction('approved')}
+            disabled={submitting}
+          >
             <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.success} />
             <Text style={[styles.actionBtnText, { color: COLORS.success }]}>Approve AI Diagnose</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.actionBtn, { borderColor: COLORS.danger, backgroundColor: COLORS.dangerBg }]} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={[styles.actionBtn, { borderColor: COLORS.danger, backgroundColor: COLORS.dangerBg, opacity: submitting ? 0.5 : 1 }]} 
+            activeOpacity={0.7}
+            onPress={() => handleAction('rejected')}
+            disabled={submitting}
+          >
             <Ionicons name="close-circle-outline" size={16} color={COLORS.danger} />
             <Text style={[styles.actionBtnText, { color: COLORS.danger }]}>Reject AI Diagnose</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.actionBtn, { borderColor: COLORS.orange, backgroundColor: COLORS.orangeBg }]} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={[styles.actionBtn, { borderColor: COLORS.orange, backgroundColor: COLORS.orangeBg, opacity: submitting ? 0.5 : 1 }]} 
+            activeOpacity={0.7}
+            onPress={() => handleAction('corrected')}
+            disabled={submitting}
+          >
             <Ionicons name="pencil-outline" size={16} color={COLORS.orange} />
             <Text style={[styles.actionBtnText, { color: COLORS.orange }]}>Edit AI Diagnose</Text>
           </TouchableOpacity>

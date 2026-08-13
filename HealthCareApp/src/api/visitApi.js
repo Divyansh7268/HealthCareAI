@@ -119,3 +119,23 @@ export async function sendVisitToDoctor(visitId, patientId) {
     throw error;
   }
 }
+
+export async function getPendingReviews() {
+  try {
+    const response = await apiClient.get('/visits/pending');
+    return response.data;
+  } catch (error) {
+    console.error('[getPendingReviews] error:', error);
+    throw error;
+  }
+}
+
+export async function submitDoctorReview(visitId, payload) {
+  try {
+    const response = await apiClient.patch(`/visits/${visitId}/review`, payload);
+    return response.data;
+  } catch (error) {
+    console.error('[submitDoctorReview] error:', error);
+    throw error;
+  }
+}

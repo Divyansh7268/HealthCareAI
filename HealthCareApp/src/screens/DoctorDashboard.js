@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../theme';
 import { useAuthStore } from '../store/useAuthStore';
+import { getPendingReviews } from '../api/visitApi';
 
 // ─────────────────────────────────────────────────────────────
 // Dummy Data
@@ -163,6 +164,26 @@ const QueryCard = ({ query, onView }) => (
 export default function DoctorDashboard({ navigation }) {
   const logout = useAuthStore((state) => state.logout);
   const [activeTab, setActiveTab] = useState('Queries');
+  const [queries, setQueries] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchQueries = async () => {
+      try {
+        const data = await getPendingReviews();
+        setQueries(data.visits || []);
+      } catch (err) {
+        console.error('Failed to fetch pending reviews:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    // Fetch initially and then poll every 10 seconds
+    fetchQueries();
+    const intervalId = setInterval(fetchQueries, 10000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -209,9 +230,32 @@ export default function DoctorDashboard({ navigation }) {
 
         {/* ── Queries List ─────────────────────── */}
         <View style={styles.listContainer}>
-          {DOCTOR_QUERIES.map(q => (
-            <QueryCard key={q.id} query={q} onView={() => navigation.navigate('DoctorPatientDetail')} />
-          ))}
+          {loading ? (
+            <Text style={{ textAlign: 'center', marginTop: 20, color: COLORS.muted }}>Loading...</Text>
+          ) : queries.length === 0 ? (
+            <View style={{ alignItems: 'center', marginTop: 40 }}>
+              <Ionicons name="checkmark-circle-outline" size={48} color={COLORS.brand} />
+              <Text style={{ marginTop: 12, color: COLORS.text, fontWeight: '600' }}>All Caught Up!</Text>
+              <Text style={{ color: COLORS.muted }}>No patients awaiting review.</Text>
+            </View>
+          ) : (
+            queries.map(q => (
+              <QueryCard 
+                key={q.id} 
+                query={{
+                  ...q,
+                  name: q.patientId || 'Patient', // fallback name if we didn't fetch patient details
+                  symptoms: q.symptoms || 'Symptoms not provided',
+                  risk: q.riskLevel ? (q.riskLevel.charAt(0).toUpperCase() + q.riskLevel.slice(1)) : 'Unknown',
+                  date: new Date(q.updatedAt?._seconds ? q.updatedAt._seconds * 1000 : Date.now()).toLocaleDateString(),
+                  time: new Date(q.updatedAt?._seconds ? q.updatedAt._seconds * 1000 : Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  avatarInitials: 'P',
+                  avatarColor: getRiskColor(q.riskLevel ? (q.riskLevel.charAt(0).toUpperCase() + q.riskLevel.slice(1)) : 'Unknown')
+                }} 
+                onView={() => navigation.navigate('DoctorPatientDetail', { visitId: q.id, patientId: q.patientId, visit: q })} 
+              />
+            ))
+          )}
         </View>
 
       </ScrollView>
