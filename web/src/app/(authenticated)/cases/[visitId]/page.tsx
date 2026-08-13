@@ -25,13 +25,16 @@ export default function CaseReviewPage() {
     const fetchDetails = async () => {
       try {
         const visitRes = await apiClient.get(`/doctor/cases/${visitId}`);
-        const visitData = visitRes.data.visit;
-        setVisit(visitData);
-
-        if (visitData.patientId) {
-          const patientRes = await apiClient.get(`/doctor/patients/${visitData.patientId}`);
-          setPatient(patientRes.data.patient);
-        }
+        const details = visitRes.data;
+        
+        // Match the backend getCaseDetails response
+        setVisit({
+          ...details.currentVisit,
+          aiAssessment: details.aiAssessment
+        });
+        
+        // Use the patient profile directly from the details response
+        setPatient(details.patientProfile);
       } catch (err) {
         console.error('Failed to load case details', err);
       } finally {
@@ -85,7 +88,7 @@ export default function CaseReviewPage() {
           <ArrowLeft size={24} className="text-[#1E293B]" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-[#1E293B]">Clinical Review: {visit.patientName}</h1>
+          <h1 className="text-2xl font-bold text-[#1E293B]">Clinical Review: {patient?.name || 'Unknown Patient'}</h1>
           <p className="text-[#64748B] text-sm">
             Visit ID: {visitId} • {visit.timestamp ? format(new Date(visit.timestamp._seconds * 1000), 'MMM d, yyyy h:mm a') : ''}
           </p>
@@ -125,7 +128,15 @@ export default function CaseReviewPage() {
               Current Symptoms
             </h2>
             <div className="space-y-3">
-              <div><p className="text-xs text-[#64748B]">Primary Symptoms</p><p className="font-medium text-[#1E293B]">{visit.symptoms || 'N/A'}</p></div>
+              <div>
+                <p className="text-xs text-[#64748B]">Primary Symptoms</p>
+                <p className="font-medium text-[#1E293B]">
+                  {Array.isArray(visit.symptoms) ? visit.symptoms.join(', ') : visit.symptoms || 'N/A'}
+                </p>
+                {visit.chiefComplaint && (
+                  <p className="font-medium text-[#DC2626] mt-2">Chief Complaint: {visit.chiefComplaint}</p>
+                )}
+              </div>
               <div><p className="text-xs text-[#64748B]">Duration</p><p className="font-medium text-[#1E293B]">{visit.duration || 'N/A'}</p></div>
               {visit.additionalNotes && (
                 <div><p className="text-xs text-[#64748B]">Additional Notes</p><p className="text-sm text-[#1E293B] bg-[#F8FAFC] p-3 rounded-lg border border-[#E2E8F0] mt-1">{visit.additionalNotes}</p></div>
@@ -202,7 +213,7 @@ export default function CaseReviewPage() {
                   {ai?.possibleConditions?.map((c: any, i: number) => (
                     <div key={i} className="bg-[#F8FAFC] p-3 rounded-lg border border-[#E2E8F0]">
                       <div className="flex justify-between items-start mb-1">
-                        <span className="font-bold text-[#0E7490]">{c.condition || c.name}</span>
+                        <span className="font-bold text-[#0E7490]">{c.name || c.condition}</span>
                         {c.probability && <span className="text-xs bg-white border border-[#E2E8F0] px-2 py-1 rounded">{c.probability}</span>}
                       </div>
                       <p className="text-sm text-[#64748B] mb-2">{c.reasoning}</p>
@@ -250,14 +261,14 @@ export default function CaseReviewPage() {
           <button onClick={() => setActionModal('moreInfo')} className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC]">
             <HelpCircle size={18} /> Ask Health Worker
           </button>
-          {/* <button onClick={() => setActionModal('edit')} className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold border border-[#0E7490] text-[#0E7490] hover:bg-[#E0F2FE]">
+          <button onClick={() => setActionModal('edit')} className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold border border-[#0E7490] text-[#0E7490] hover:bg-[#E0F2FE]">
             <FileEdit size={18} /> Edit Plan
-          </button> */}
+          </button>
           <button onClick={() => setActionModal('reject')} className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold bg-[#FEF2F2] text-[#DC2626] border border-[#FCA5A5] hover:bg-[#FEE2E2]">
-            <XCircle size={18} /> Reject
+            <XCircle size={18} /> Wrong / Reject
           </button>
           <button onClick={() => setActionModal('approve')} className="flex items-center gap-2 px-8 py-3 rounded-lg font-semibold bg-[#16A34A] text-white hover:bg-[#15803D]">
-            <CheckCircle2 size={18} /> Approve Treatment
+            <CheckCircle2 size={18} /> Correct / Approve
           </button>
         </div>
       )}
