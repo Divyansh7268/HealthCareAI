@@ -257,7 +257,7 @@ export default function HealthWorkerDashboard({ navigation, workerName = 'Asha D
           renderConsultTab()
         ) : (
           <ScrollView
-            style={{ flex: 1, display: activeTab === 'Home' ? 'flex' : 'none' }}
+            style={{ flex: 1, display: (activeTab === 'Home' || activeTab === 'Patients') ? 'flex' : 'none' }}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
