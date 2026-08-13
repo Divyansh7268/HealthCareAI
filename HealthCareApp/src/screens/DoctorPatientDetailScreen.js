@@ -168,7 +168,7 @@ export default function DoctorPatientDetailScreen({ navigation, route }) {
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 }}>
               <Ionicons name="medkit" size={20} color={COLORS.brand} style={{ marginRight: 6, marginTop: 2 }} />
               <Text style={{ fontSize: 16, color: COLORS.textDark, flex: 1, lineHeight: 24 }}>
-                {p.aiAssessment.conditions && p.aiAssessment.conditions.length > 0 ? p.aiAssessment.conditions[0].name : 'Unknown Condition'}
+                {p.aiAssessment.possibleConditions && p.aiAssessment.possibleConditions.length > 0 ? p.aiAssessment.possibleConditions[0].name : 'Unknown Condition'}
               </Text>
             </View>
 
@@ -178,7 +178,7 @@ export default function DoctorPatientDetailScreen({ navigation, route }) {
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 }}>
               <Ionicons name="bandage" size={20} color={COLORS.success} style={{ marginRight: 6, marginTop: 2 }} />
               <Text style={{ fontSize: 16, color: COLORS.textDark, flex: 1, lineHeight: 24 }}>
-                {p.aiAssessment.recommendations ? p.aiAssessment.recommendations.join(', ') : 'Follow basic care instructions.'}
+                {p.aiAssessment.recommendedNextStep ? p.aiAssessment.recommendedNextStep : 'Follow basic care instructions.'}
               </Text>
             </View>
           </View>

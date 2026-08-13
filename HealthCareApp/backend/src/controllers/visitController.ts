@@ -293,7 +293,7 @@ export const sendToDoctor = async (req: Request, res: Response) => {
 export const getPendingReviews = async (req: Request, res: Response) => {
   try {
     const { db } = require('../config/firebase');
-    const COLLECTIONS = { VISITS: 'visits', PATIENTS: 'patients' };
+    const COLLECTIONS = { VISITS: 'visits', PATIENTS: 'patients', AI_ASSESSMENTS: 'aiAssessments' };
     const snapshot = await db.collection(COLLECTIONS.VISITS)
       .where('doctorReviewStatus', '==', 'review_required')
       .get();
@@ -316,8 +316,16 @@ export const getPendingReviews = async (req: Request, res: Response) => {
           };
         }
       }
+
+      let aiAssessment = visitData.aiAssessment || {};
+      if (visitData.aiAssessmentId && Object.keys(aiAssessment).length === 0) {
+        const aiDoc = await db.collection(COLLECTIONS.AI_ASSESSMENTS).doc(visitData.aiAssessmentId).get();
+        if (aiDoc.exists) {
+          aiAssessment = aiDoc.data();
+        }
+      }
       
-      visits.push({ id: doc.id, ...visitData, ...patientInfo });
+      visits.push({ id: doc.id, ...visitData, ...patientInfo, aiAssessment });
     }
 
     // Sort newest first (descending)
