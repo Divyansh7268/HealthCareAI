@@ -7,11 +7,14 @@ import {
   ScrollView,
   Platform,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS as THEME_COLORS, FONTS as THEME_FONTS } from '../theme';
+import { sendVisitToDoctor } from '../api/visitApi';
 
 const { width } = Dimensions.get('window');
 
@@ -66,7 +69,8 @@ function riskBgColor(level) {
 // Helper to parse the AI Result
 // ─────────────────────────────────────────────────────────────
 export default function AIAnalysisResultScreen({ navigation, route }) {
-  const { aiResult, patientName } = route?.params || {};
+  const { aiResult, patientName, visitId, patientId } = route?.params || {};
+  const [sending, setSending] = React.useState(false);
   
   if (!aiResult) {
     return (
@@ -100,7 +104,27 @@ export default function AIAnalysisResultScreen({ navigation, route }) {
     : recommendations;
 
   const handleNextPatient = () => {
-    navigation.navigate('HealthWorkerDashboard');
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'PatientSearch' }],
+    });
+  };
+
+  const handleSendToDoctor = async () => {
+    if (!visitId || !patientId) {
+      Alert.alert('Error', 'Missing visit information.');
+      return;
+    }
+    try {
+      setSending(true);
+      await sendVisitToDoctor(visitId, patientId);
+      Alert.alert('Success', 'Request sent to doctor successfully!', [
+        { text: 'OK', onPress: handleNextPatient }
+      ]);
+    } catch (err) {
+      Alert.alert('Error', 'Failed to send to doctor. Please try again.');
+      setSending(false);
+    }
   };
 
   return (
@@ -227,6 +251,16 @@ export default function AIAnalysisResultScreen({ navigation, route }) {
 
         {/* ── Fixed Bottom Button ────────────── */}
         <View style={styles.bottomBtnWrapper}>
+          <TouchableOpacity
+            style={[styles.nextBtn, { backgroundColor: COLORS.white, borderColor: COLORS.primary, borderWidth: 1, marginBottom: 12 }]}
+            activeOpacity={0.85}
+            onPress={handleSendToDoctor}
+            disabled={sending}
+          >
+            <Ionicons name="medical-outline" size={22} color={COLORS.primary} style={{ position: 'absolute', left: 24 }} />
+            <Text style={[styles.nextBtnText, { color: COLORS.primary }]}>{sending ? 'Sending...' : 'Send To Doctor'}</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.nextBtn}
             activeOpacity={0.85}

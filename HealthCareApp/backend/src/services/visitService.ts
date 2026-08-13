@@ -133,7 +133,7 @@ export async function saveAIAssessment(
     urgency: assessment.riskLevel === 'emergency' ? 'emergency' : 'routine',
     referralRequired: assessment.doctorReviewRequired,
     aiAssessmentId: assessmentRef.id,
-    doctorReviewStatus: 'review_required',
+    doctorReviewStatus: 'pending',
     status: 'ai_assessed',
     updatedAt: now,
   });
@@ -145,7 +145,7 @@ export async function saveAIAssessment(
       urgency: assessment.riskLevel === 'emergency' ? 'emergency' : 'routine',
       referralRequired: assessment.doctorReviewRequired,
       aiAssessmentId: assessmentRef.id,
-      doctorReviewStatus: 'review_required',
+      doctorReviewStatus: 'pending',
       status: 'ai_assessed',
       updatedAt: now,
     },

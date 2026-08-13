@@ -284,7 +284,7 @@ export default function PatientAIAnalysisScreen({ navigation, route }) {
       setIsAnalyzing(false);
       
       // Navigation to the dedicated AI results screen
-      navigation.navigate('AIAnalysisResult', { aiResult: result.assessment, patientName });
+      navigation.navigate('AIAnalysisResult', { aiResult: result.assessment, patientName, visitId, patientId });
 
     } catch (error) {
       setIsAnalyzing(false);
