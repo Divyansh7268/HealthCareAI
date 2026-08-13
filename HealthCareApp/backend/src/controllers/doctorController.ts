@@ -12,7 +12,6 @@ export async function getPendingCases(req: Request, res: Response) {
     // For simplicity, fetch all visits where doctorReviewStatus is 'review_required'
     const casesSnap = await db.collection(COLLECTIONS.VISITS)
       .where('doctorReviewStatus', '==', 'review_required')
-      .orderBy('updatedAt', 'desc')
       .limit(50)
       .get();
       
