@@ -155,17 +155,22 @@ export default function AIAnalysisResultScreen({ navigation, route }) {
             </>
           )}
 
-          {/* ── Possible Conditions ────────── */}
+          {/* ── AI Suggestions ────────── */}
           {possibleConditions.length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>POSSIBLE CONDITIONS</Text>
+              <Text style={styles.sectionTitle}>AI SUGGESTION</Text>
               <View style={styles.recsCard}>
                 {possibleConditions.map((cond, index) => (
                   <View key={index} style={[styles.recRow, index !== possibleConditions.length - 1 && styles.recRowBorder, { flexDirection: 'column', alignItems: 'flex-start' }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                       <Ionicons name="medkit-outline" size={18} color={COLORS.primary} style={{ marginRight: 8 }} />
-                      <Text style={[styles.recText, { fontWeight: '700' }]}>{cond.condition} ({cond.probability})</Text>
+                      <Text style={[styles.recText, { fontWeight: '700' }]}>{cond.name}</Text>
                     </View>
+                    {cond.reasoning && (
+                      <Text style={{ fontSize: 13, color: COLORS.textDark, paddingLeft: 26, marginBottom: 4 }}>
+                        {cond.reasoning}
+                      </Text>
+                    )}
                     {cond.supportingFindings?.length > 0 && (
                       <Text style={{ fontSize: 13, color: COLORS.textGray, paddingLeft: 26 }}>
                         Supports: {cond.supportingFindings.join(', ')}
