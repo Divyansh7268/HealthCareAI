@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS as THEME_COLORS, FONTS, RADIUS, SHADOW, SPACING } from '../theme';
+import { COLORS as THEME_COLORS, FONTS as THEME_FONTS, RADIUS, SHADOW, SPACING } from '../theme';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { searchPatients } from '../api/patientApi';
