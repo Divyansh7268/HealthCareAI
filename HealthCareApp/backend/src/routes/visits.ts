@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { analyzeVisit, sendToDoctor } from '../controllers/visitController';
+import { analyzeVisit, sendToDoctor, getPendingReviews, submitDoctorReview } from '../controllers/visitController';
 import { transcribeVisitAudio } from '../controllers/voiceController';
 import { authenticate } from '../middleware/auth';
 import { requireAuth } from '../middleware/roleAuth';
@@ -10,6 +10,13 @@ const router = Router();
 
 // Mount uploads router with mergeParams so it can access :visitId
 router.use('/:visitId/uploads', uploadRoutes);
+
+/**
+ * GET /api/v1/visits/pending
+ * 
+ * Fetch all visits that require doctor review.
+ */
+router.get('/pending', authenticate, getPendingReviews);
 
 /**
  * POST /api/v1/visits/:visitId/analyze
@@ -31,5 +38,12 @@ router.post('/:visitId/transcribe', requireAuth, transcribeVisitAudio);
  * Sends the visit to the doctor for review.
  */
 router.post('/:visitId/send-to-doctor', authenticate, sendToDoctor);
+
+/**
+ * PATCH /api/v1/visits/:visitId/review
+ * 
+ * Submit doctor's review (approve, correct, or reject).
+ */
+router.patch('/:visitId/review', authenticate, submitDoctorReview);
 
 export default router;

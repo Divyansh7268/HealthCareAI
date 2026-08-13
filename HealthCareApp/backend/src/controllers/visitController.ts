@@ -289,3 +289,58 @@ export const sendToDoctor = async (req: Request, res: Response) => {
     return res.status(500).json({ error: 'Failed to send to doctor' });
   }
 };
+
+export const getPendingReviews = async (req: Request, res: Response) => {
+  try {
+    const { db } = require('../config/firebase');
+    const COLLECTIONS = { VISITS: 'visits' };
+    const snapshot = await db.collection(COLLECTIONS.VISITS)
+      .where('doctorReviewStatus', '==', 'review_required')
+      .get();
+    const visits: any[] = [];
+    snapshot.forEach((doc: any) => visits.push({ id: doc.id, ...doc.data() }));
+    return res.status(200).json({ success: true, visits });
+  } catch (error: any) {
+    console.error('[getPendingReviews] Failed:', error.message);
+    return res.status(500).json({ error: 'Failed to fetch pending reviews' });
+  }
+};
+
+export const submitDoctorReview = async (req: Request, res: Response) => {
+  try {
+    const { visitId } = req.params;
+    const { patientId, action, reviewNotes, updatedConditions, updatedRecommendations } = req.body;
+    if (!visitId || !patientId) return res.status(400).json({ error: 'visitId and patientId required' });
+    
+    const { db } = require('../config/firebase');
+    const COLLECTIONS = { PATIENTS: 'patients', VISITS: 'visits', AI_ASSESSMENTS: 'aiAssessments' };
+    
+    const visitRef = db.collection(COLLECTIONS.PATIENTS).doc(patientId).collection(COLLECTIONS.VISITS).doc(visitId);
+    
+    const updateData = {
+      doctorReviewStatus: action, // 'approved', 'corrected', 'rejected'
+      doctorNotes: reviewNotes || '',
+      updatedAt: new Date()
+    };
+    
+    await visitRef.update(updateData);
+    await db.collection(COLLECTIONS.VISITS).doc(visitId).set(updateData, { merge: true });
+    
+    // Also update the AI assessment if there are corrections
+    const visitDoc = await visitRef.get();
+    const visitData = visitDoc.data();
+    if (visitData && visitData.aiAssessmentId && (updatedConditions || updatedRecommendations)) {
+      await db.collection(COLLECTIONS.AI_ASSESSMENTS).doc(visitData.aiAssessmentId).set({
+        doctorCorrected: true,
+        correctedConditions: updatedConditions || [],
+        correctedRecommendations: updatedRecommendations || [],
+        correctedAt: new Date()
+      }, { merge: true });
+    }
+    
+    return res.status(200).json({ success: true, message: 'Review submitted successfully' });
+  } catch (error: any) {
+    console.error('[submitDoctorReview] Failed:', error.message);
+    return res.status(500).json({ error: 'Failed to submit review' });
+  }
+};
