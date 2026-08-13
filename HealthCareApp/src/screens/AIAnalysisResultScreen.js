@@ -105,7 +105,7 @@ export default function AIAnalysisResultScreen({ navigation, route }) {
   const handleNextPatient = () => {
     navigation.reset({
       index: 0,
-      routes: [{ name: 'PatientSearch' }],
+      routes: [{ name: 'HealthWorkerDashboard' }],
     });
   };
 
