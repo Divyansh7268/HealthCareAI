@@ -18,9 +18,9 @@ import axios from 'axios';
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || '');
 
-// Using gemini-1.5-flash as it natively supports multimodal audio
+// Using gemini-3.6-flash as it natively supports multimodal audio
 const model = genAI.getGenerativeModel({
-  model: 'gemini-1.5-flash',
+  model: 'gemini-3.6-flash',
   generationConfig: {
     responseMimeType: 'application/json',
     responseSchema: {
