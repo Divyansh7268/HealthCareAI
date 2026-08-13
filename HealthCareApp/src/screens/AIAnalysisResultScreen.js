@@ -12,7 +12,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS as THEME_COLORS, FONTS as THEME_FONTS } from '../theme';
 import { sendVisitToDoctor } from '../api/visitApi';
 
