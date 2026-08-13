@@ -9,6 +9,7 @@ import { db } from '../config/firebase';
 import { FieldValue } from 'firebase-admin/firestore';
 import { RuleEngineOutput } from '../rules/ruleEngine';
 import { AIAssessmentResult } from '../ai/aiSchema';
+import { TrendResult } from './trendService';
 
 import { COLLECTIONS } from '../config/collections';
 
@@ -62,7 +63,8 @@ export async function saveAIAssessment(
   visitId: string,
   assessment: AIAssessmentResult,
   ruleResult: RuleEngineOutput,
-  assessedByUserId: string
+  assessedByUserId: string,
+  trendResult?: TrendResult
 ): Promise<string> {
   const now = FieldValue.serverTimestamp();
 
@@ -111,6 +113,8 @@ export async function saveAIAssessment(
     // Rule engine flags for traceability
     ruleEngineFlags: ruleResult.ruleTriggered,
     ruleEngineCritical: ruleResult.critical,
+    // Longitudinal trend (factual, computed before AI call)
+    longitudinalTrend: trendResult ?? null,
     status: 'pending_review',
   };
 

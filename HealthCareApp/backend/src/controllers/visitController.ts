@@ -116,6 +116,7 @@ import { processClinicalAI } from '../ai/aiService';
 import { getVisit, saveAIAssessment } from '../services/visitService';
 import { buildClinicalContext } from '../services/clinicalContextService';
 import { createAuditLog } from '../services/auditService';
+import { computePatientTrend, TrendResult } from '../services/trendService';
 
 /**
  * POST /api/v1/visits/:visitId/analyze
@@ -153,6 +154,26 @@ export async function analyzeVisit(req: Request, res: Response) {
     patientHistory = JSON.stringify(contextObj, null, 2);
   } catch (err) {
     console.warn('[analyzeVisit] Could not fetch patient history:', err);
+  }
+
+  // ── Step 3b: Compute Longitudinal Trend ──────────────────────
+  let trendResult: TrendResult | null = null;
+  try {
+    trendResult = await computePatientTrend({
+      patientId,
+      visitId,
+      vitals: visitData.vitals,
+      symptoms: visitData.symptoms,
+      bodyLocations: visitData.bodyLocations,
+    });
+    console.log(`[analyzeVisit] Trend computed: ${trendResult.overallTrend} (compared ${trendResult.comparedVisitCount} visits)`);
+    // Append factual trend summary to history context — the AI may interpret but must not invent
+    patientHistory = JSON.stringify(
+      { ...JSON.parse(patientHistory || '{}'), longitudinalTrend: trendResult },
+      null, 2
+    );
+  } catch (err) {
+    console.warn('[analyzeVisit] Trend computation failed — proceeding without trend:', err);
   }
 
   // ── Step 4: Load relevant image/audio references ────────────────
@@ -223,7 +244,8 @@ export async function analyzeVisit(req: Request, res: Response) {
       visitId,
       aiAssessment,
       ruleResult,
-      user?.uid || 'system'
+      user?.uid || 'system',
+      trendResult ?? undefined
     );
     
     // Explicitly create an audit log
@@ -242,6 +264,7 @@ export async function analyzeVisit(req: Request, res: Response) {
     success: true,
     assessmentId,
     assessment: aiAssessment,
+    longitudinalTrend: trendResult,
     ruleEngineFlags: ruleResult.ruleTriggered,
     visitId,
     patientId,
