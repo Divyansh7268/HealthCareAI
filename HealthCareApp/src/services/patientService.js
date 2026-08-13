@@ -6,6 +6,8 @@
  */
 
 import apiClient from '../api/apiClient';
+import { createLocalPatient } from '../storage/repositories/patientRepo';
+import { createLocalVisit } from '../storage/repositories/visitRepo';
 
 export function normalisePhone(raw) {
   if (!raw) return null;
@@ -30,25 +32,49 @@ export async function registerPatientAndStartVisit(formData, healthWorkerUid) {
     phone: normPhone,
   };
 
-  const patientResponse = await apiClient.post('/patients', patientPayload);
-  const patient = patientResponse.data.patient;
-  const isExistingPatient = patientResponse.data.message === 'Patient already exists';
+  try {
+    const patientResponse = await apiClient.post('/patients', patientPayload);
+    const patient = patientResponse.data.patient;
+    const isExistingPatient = patientResponse.data.message === 'Patient already exists';
 
-  // 2. Create Visit via Backend
-  const visitPayload = {
-    symptoms: [],
-    vitals: {},
-    bodyLocations: [],
-    medicalImageRefs: [],
-  };
+    // 2. Create Visit via Backend
+    const visitPayload = {
+      symptoms: [],
+      vitals: {},
+      bodyLocations: [],
+      medicalImageRefs: [],
+    };
 
-  const visitResponse = await apiClient.post(`/patients/${patient.id}/visits`, visitPayload);
-  const visit = visitResponse.data.visit;
+    const visitResponse = await apiClient.post(`/patients/${patient.id}/visits`, visitPayload);
+    const visit = visitResponse.data.visit;
 
-  return { patientId: patient.id, visitId: visit.id, isExistingPatient };
+    return { patientId: patient.id, visitId: visit.id, isExistingPatient, isOffline: false };
+  } catch (err) {
+    // Fallback to offline creation
+    console.warn('[patientService] Network failed, creating patient/visit offline:', err.message);
+    const localPatient = await createLocalPatient(patientPayload);
+    const localVisit = await createLocalVisit(localPatient.id);
+    
+    return { 
+      patientId: localPatient.id, 
+      visitId: localVisit.id, 
+      isExistingPatient: false, 
+      isOffline: true 
+    };
+  }
 }
 
 export async function updateVisitData(patientId, visitId, updates, workerUid) {
-  await apiClient.patch(`/patients/${patientId}/visits/${visitId}`, updates);
+  try {
+    // If it's a known local ID, skip the network and go straight to local DB
+    if (visitId && visitId.startsWith('local_')) {
+      throw new Error('Local visit ID requires offline update');
+    }
+    await apiClient.patch(`/patients/${patientId}/visits/${visitId}`, updates);
+  } catch (err) {
+    console.warn('[patientService] Network failed, updating visit offline:', err.message);
+    const { updateLocalVisitData } = require('../storage/repositories/visitRepo');
+    await updateLocalVisitData(visitId, updates);
+  }
 }
 

@@ -22,6 +22,9 @@ import { COLORS as THEME_COLORS, FONTS as THEME_FONTS, RADIUS, SHADOW, SPACING }
 import BodyMap from '../components/BodyMap/BodyMap';
 import { updateVisitData } from '../services/patientService';
 import { analyzeVisit, uploadFile, transcribeAudio } from '../api/visitApi';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { computeOfflineAssessment } from '../clinical/offlineAssessment';
+import { saveOfflineAssessment } from '../storage/repositories/assessmentRepo';
 
 const { width, height } = Dimensions.get('window');
 
@@ -72,8 +75,10 @@ const BackgroundWaves = () => (
 export default function PatientAIAnalysisScreen({ navigation, route }) {
   const { patientId, visitId, patientName: routePatientName } = route?.params || {};
   const patientName = routePatientName || 'Patient';
-
+  const isOnline = useNetworkStatus();
+  
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [offlineResult, setOfflineResult] = useState(null);
   
   // ── Form State ─────────────────────────────────────
   const [bodyLocations, setBodyLocations] = useState([]);
@@ -258,6 +263,21 @@ export default function PatientAIAnalysisScreen({ navigation, route }) {
         }
       }
       
+      if (!isOnline) {
+        // Run completely offline assessment
+        const result = computeOfflineAssessment({
+          vitals,
+          symptoms: payload.symptoms,
+          additionalNotes: payload.additionalNotes,
+          bodyLocations: payload.bodyLocations
+        }, null); // no history passed for simplicity
+        
+        await saveOfflineAssessment(visitId, result);
+        setIsAnalyzing(false);
+        setOfflineResult(result);
+        return; // Stop here, do not navigate to AI screen
+      }
+
       payload.voiceTranscript = finalTranscript;
       const result = await analyzeVisit(visitId, payload);
       
@@ -284,7 +304,9 @@ export default function PatientAIAnalysisScreen({ navigation, route }) {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
             <Ionicons name="arrow-back" size={24} color={COLORS.textDark} />
           </TouchableOpacity>
-          <View style={{ width: 24 }} />
+          <View style={[styles.networkBadge, { backgroundColor: isOnline ? '#16A34A' : '#D97706' }]}>
+            <Text style={styles.networkBadgeText}>{isOnline ? 'ONLINE' : 'OFFLINE MODE'}</Text>
+          </View>
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -432,20 +454,67 @@ export default function PatientAIAnalysisScreen({ navigation, route }) {
 
         {/* ── Fixed Bottom Button ─────────────── */}
         <View style={styles.bottomBtnWrapper}>
-          <TouchableOpacity
-            style={[styles.generateBtn, isAnalyzing && { opacity: 0.7 }]}
-            activeOpacity={0.85}
-            onPress={handleGenerateAI}
-            disabled={isAnalyzing}
-          >
-            {isAnalyzing ? (
-              <ActivityIndicator size="small" color={COLORS.white} style={{ marginRight: 10 }} />
-            ) : (
-              <Ionicons name="sparkles" size={20} color={COLORS.white} style={{ marginRight: 8 }} />
+            <TouchableOpacity
+              style={[styles.submitBtn, (!symptoms && bodyLocations.length === 0 && !audioUri && images.length === 0) && styles.submitBtnDisabled]}
+              onPress={handleGenerateAI}
+              disabled={isAnalyzing}
+              activeOpacity={0.8}
+            >
+              {isAnalyzing ? (
+                <ActivityIndicator color={COLORS.white} size="small" />
+              ) : (
+                <>
+                  <Ionicons name={isOnline ? "sparkles" : "medkit"} size={20} color={COLORS.white} />
+                  <Text style={styles.submitBtnText}>{isOnline ? 'Generate AI Analysis' : 'Run Offline Assessment'}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* Offline Result Display Block */}
+            {offlineResult && (
+              <View style={styles.offlineResultContainer}>
+                <View style={styles.offlineHeader}>
+                  <MaterialCommunityIcons name="shield-check" size={24} color="#0E7490" />
+                  <Text style={styles.offlineTitle}>OFFLINE ASSESSMENT</Text>
+                </View>
+
+                <View style={styles.offlineCard}>
+                  <View style={styles.offlineRow}>
+                    <Text style={styles.offlineLabel}>NEWS2 Score:</Text>
+                    <Text style={styles.offlineValue}>{offlineResult.news2?.score ?? 'N/A'} - {offlineResult.news2?.riskCategory}</Text>
+                  </View>
+                  <View style={styles.offlineRow}>
+                    <Text style={styles.offlineLabel}>GCS Score:</Text>
+                    <Text style={styles.offlineValue}>{offlineResult.gcs?.total ? `${offlineResult.gcs.total}/15` : 'Not recorded'}</Text>
+                  </View>
+                  <View style={styles.offlineRow}>
+                    <Text style={styles.offlineLabel}>Red Flags:</Text>
+                    <Text style={styles.offlineValue}>{offlineResult.redFlags?.length > 0 ? offlineResult.redFlags.join(', ') : 'None detected'}</Text>
+                  </View>
+                  <View style={styles.offlineRow}>
+                    <Text style={styles.offlineLabel}>Patient Trend:</Text>
+                    <Text style={styles.offlineValue}>{offlineResult.trend?.overallTrend}</Text>
+                  </View>
+                  <View style={styles.offlineRow}>
+                    <Text style={styles.offlineLabel}>Missing Info:</Text>
+                    <Text style={styles.offlineValue}>{offlineResult.missingInformation?.length > 0 ? offlineResult.missingInformation.join(', ') : 'None'}</Text>
+                  </View>
+                  <View style={[styles.offlineRow, { borderBottomWidth: 0, marginTop: 8 }]}>
+                    <Text style={styles.offlineLabel}>Recommendation:</Text>
+                    <Text style={[styles.offlineValue, { color: offlineResult.doctorReviewRequired ? '#DC2626' : '#16A34A', fontWeight: 'bold' }]}>
+                      {offlineResult.overallStatus}
+                    </Text>
+                  </View>
+                </View>
+                
+                <View style={styles.offlineDisclaimer}>
+                  <Ionicons name="information-circle" size={16} color="#64748B" />
+                  <Text style={styles.offlineDisclaimerText}>
+                    Offline clinical support is based on configured rules and clinical scoring tools. Full AI assessment will be available after synchronization.
+                  </Text>
+                </View>
+              </View>
             )}
-            <Text style={styles.generateBtnText}>{isAnalyzing ? 'Analyzing Data...' : 'Generate AI Analysis'}</Text>
-            {!isAnalyzing && <Ionicons name="arrow-forward" size={18} color={COLORS.white} style={{ marginLeft: 8 }} />}
-          </TouchableOpacity>
         </View>
       </SafeAreaView>
     </View>
@@ -522,6 +591,18 @@ const styles = StyleSheet.create({
   vitalInput: { ...FONTS.h3, color: COLORS.primary, padding: 0, minWidth: 40, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   vitalUnit: { ...FONTS.body, fontSize: 12, color: COLORS.textGray, marginLeft: 4 },
   bottomBtnWrapper: { backgroundColor: COLORS.bg, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Platform.OS === 'ios' ? 24 : 16 },
-  generateBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary, borderRadius: 16, paddingVertical: 18, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
-  generateBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
+  submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary, borderRadius: 16, paddingVertical: 18, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+  submitBtnDisabled: { opacity: 0.5 },
+  submitBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '700', marginLeft: 10 },
+  networkBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginRight: 4 },
+  networkBadgeText: { color: '#FFF', fontSize: 9, fontWeight: 'bold' },
+  offlineResultContainer: { marginTop: 20, backgroundColor: '#F0F9FF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#BAE6FD' },
+  offlineHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  offlineTitle: { ...FONTS.h2, color: '#0E7490', marginLeft: 8 },
+  offlineCard: { backgroundColor: COLORS.white, borderRadius: 12, padding: 12 },
+  offlineRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  offlineLabel: { ...FONTS.label, color: '#0369A1' },
+  offlineValue: { ...FONTS.body, color: '#0F172A', fontWeight: '500', maxWidth: '65%', textAlign: 'right' },
+  offlineDisclaimer: { flexDirection: 'row', marginTop: 16, padding: 12, backgroundColor: '#F8FAFC', borderRadius: 8 },
+  offlineDisclaimerText: { ...FONTS.body, fontSize: 12, color: '#475569', marginLeft: 8, flex: 1 },
 });

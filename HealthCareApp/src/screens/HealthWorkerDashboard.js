@@ -18,6 +18,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS as THEME_COLORS, FONTS as THEME_FONTS, RADIUS, SHADOW, SPACING } from '../theme';
 import { useAuthStore } from '../store/useAuthStore';
 import { searchPatients } from '../api/patientApi';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { searchLocalPatients } from '../storage/repositories/patientRepo';
 
 const { width } = Dimensions.get('window');
 
@@ -129,6 +131,7 @@ export default function HealthWorkerDashboard({ navigation, workerName = 'Asha D
   const [activeTab, setActiveTab]       = useState('Home');
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery]   = useState('');
+  const isOnline = useNetworkStatus();
   
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -172,6 +175,9 @@ export default function HealthWorkerDashboard({ navigation, workerName = 'Asha D
             </View>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={[styles.networkBadge, { backgroundColor: isOnline ? '#16A34A' : '#D97706' }]}>
+              <Text style={styles.networkBadgeText}>{isOnline ? 'ONLINE' : 'OFFLINE MODE'}</Text>
+            </View>
             <TouchableOpacity style={styles.iconBtn} activeOpacity={0.8}>
               <Ionicons name="notifications-outline" size={22} color={COLORS.primary} />
               <View style={styles.bellBadge}>
@@ -361,6 +367,17 @@ const styles = StyleSheet.create({
   headerSub: {
     ...FONTS.body,
     fontSize: 12,
+  },
+  networkBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 4,
+  },
+  networkBadgeText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: 'bold',
   },
   iconBtn: {
     width: 40,
